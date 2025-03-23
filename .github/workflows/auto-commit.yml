@@ -1,16 +1,16 @@
 name: Auto Commit Machine
 on:
   schedule:
-  - cron: '*/1 * * * *'  # Runs every 1 minute
+    - cron: '*/1 * * * *'  # Runs every 1 minute
 jobs:
   make-commits:
     runs-on: ubuntu-latest
     steps:
-  - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
     - name: Add a line to the log
-    run: echo "Commit at $(date)" >> commit-log.txt
+      run: echo "Commit at $(date)" >> commit-log.txt
     - name: Commit and push
-    run: |
+      run: |
         git config --global user.name "Auto Commit Bot"
         git config --global user.email "bot@commits.com"
         git add commit-log.txt
