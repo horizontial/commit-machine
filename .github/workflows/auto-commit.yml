@@ -2,6 +2,8 @@ name: Auto Commit Machine
 on:
   schedule:
     - cron: '*/1 * * * *'  # Runs every 1 minute
+  push:
+    branches: [main]
 jobs:
   make-commits:
     runs-on: ubuntu-latest
