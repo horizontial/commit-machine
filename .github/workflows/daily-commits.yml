@@ -1,0 +1,64 @@
+name: Daily Commit Bot (80–120 random)
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # ทุกวัน 00:00 UTC (07:00 ไทย) ปรับได้
+  workflow_dispatch:       # กดรันเองได้
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set Git config
+        run: |
+          git config user.name "horizontial"
+          git config user.email "68624476+horizontial@users.noreply.github.com"
+
+      # นับจำนวนวันที่รัน เพื่อหยุดหลังครบ 10 วัน
+      - name: Prepare counter (stop after 10 days)
+        id: counter
+        run: |
+          mkdir -p .ci
+          if [ -f .ci/daily-run-count.txt ]; then
+            COUNT=$(cat .ci/daily-run-count.txt)
+          else
+            COUNT=0
+          fi
+          echo "Current run count: $COUNT"
+          if [ "$COUNT" -ge 10 ]; then
+            echo "limit_reached=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          # กำหนดจำนวนคอมมิตของวันนี้แบบสุ่ม 80–120
+          COMMITS=$((80 + RANDOM % 41))
+          echo "Today's commits: $COMMITS"
+          echo $((COUNT+1)) > .ci/daily-run-count.txt
+          echo $COMMITS > .ci/today-commits.txt
+
+      - name: Make random commits with random delay
+        if: steps.counter.outputs.limit_reached != 'true'
+        run: |
+          FILE=action_commits.txt
+          touch "$FILE"
+          COMMITS=$(cat .ci/today-commits.txt)
+
+          # ทำคอมมิตทีละรายการ พร้อมสุ่มหน่วง 20–90 วินาที (เพื่อให้ไม่เกิน 6 ชม./วัน)
+          for ((i=1; i<COMMITS; i++)); do
+            echo "Daily Commit $i - $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$FILE"
+            git add "$FILE"
+            git commit -m "chore: daily commit $i"
+
+            DELAY=$(( 20 + RANDOM % 71 ))  # 20–90 วินาที
+            echo "⏳ sleep $DELAY sec"
+            sleep $DELAY
+          done
+
+          # คอมมิตสุดท้ายของวัน (รวมอัปเดตตัวนับ)
+          echo "Daily Commit $COMMITS - $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$FILE"
+          git add "$FILE" .ci/daily-run-count.txt .ci/today-commits.txt
+          git commit -m "chore: daily commit $COMMITS + update counter"
+          git push
